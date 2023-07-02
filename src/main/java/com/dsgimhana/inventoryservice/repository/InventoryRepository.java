@@ -18,19 +18,18 @@ public interface InventoryRepository extends JpaRepository<InventoryEntity, Long
   Optional<InventoryEntity> findById(Long id);
 
   @Modifying(clearAutomatically = true)
-  @Query(
-      "UPDATE InventoryEntity i SET i.allocation = i.allocation + :count, i.available = i.available + :count WHERE i.id = :id")
-  int allocateInventory(@Param("id") Long id, @Param("count") int count);
+  @Query("UPDATE InventoryEntity i SET i.allocation = :allocation, i.available = :available WHERE i.id = :id")
+  void allocateInventory(@Param("id") Long id, @Param("allocation") int allocation, @Param("available") int available);
 
   @Modifying(clearAutomatically = true)
   @Query(
       "UPDATE InventoryEntity i SET i.sold = i.sold + :count, i.available = i.available - :count WHERE i.id = :id")
-  int sellInventory(@Param("id") Long id, @Param("count") int count);
+  void sellInventory(@Param("id") Long id, @Param("count") int count);
 
   @Modifying(clearAutomatically = true)
   @Query(
       "UPDATE InventoryEntity i SET i.sold = i.sold - :count, i.available = i.available + :count WHERE i.id = :id")
-  int cancelInventory(@Param("id") Long id, @Param("count") int count);
+  void cancelInventory(@Param("id") Long id, @Param("count") int count);
 
   List<InventoryEntity> findAllByAvailableGreaterThanEqual(int count);
 

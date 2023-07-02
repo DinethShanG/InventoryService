@@ -6,6 +6,7 @@ package com.dsgimhana.inventoryservice.service.impl;
 
 import com.dsgimhana.inventoryservice.dto.request.CancelInventoryRQ;
 import com.dsgimhana.inventoryservice.dto.request.ModifyAllocationRQ;
+import com.dsgimhana.inventoryservice.dto.request.ModifyAllocationType;
 import com.dsgimhana.inventoryservice.dto.request.SellInventoryRQ;
 import com.dsgimhana.inventoryservice.entity.InventoryEntity;
 import com.dsgimhana.inventoryservice.entity.ProductEntity;
@@ -73,20 +74,51 @@ public class InventoryServiceImpl implements InventoryService {
   }
 
   @Override
+  @Transactional
   public InventoryEntity updateInventoryAllocationById(ModifyAllocationRQ modifyAllocationRQ) {
     Long productId = modifyAllocationRQ.getProductId();
     int count = modifyAllocationRQ.getAllocation();
+    ModifyAllocationType allocationType = modifyAllocationRQ.getModifyAllocationType();
 
     Optional<InventoryEntity> inventory = inventoryRepository.findById(productId);
     if (inventory.isPresent()) {
-      inventoryRepository.allocateInventory(productId, count);
-      return inventory.get();
+      InventoryEntity inventoryEntity = inventory.get();
+      int currentAllocation = inventoryEntity.getAllocation();
+      int currentAvailable = inventoryEntity.getAvailable();
+      int newAllocation;
+      int newAvailable;
+
+      switch (allocationType) {
+        case INCREMENT -> {
+          newAllocation = currentAllocation + count;
+          newAvailable = currentAvailable + count;
+        }
+        case DECREMENT -> {
+          if (currentAllocation - count > 0 && currentAvailable - count > 0) {
+            newAllocation = currentAllocation - count;
+            newAvailable = currentAvailable - count;
+          } else {
+            throw new IllegalArgumentException("New Allocation/Available should not lesser than 0 for product " + inventoryEntity.getId());
+          }
+        }
+        case RESET -> {
+          newAllocation = count;
+          newAvailable = count;
+        }
+        default -> throw new IllegalArgumentException("Invalid allocation type: " + allocationType + "for product " + inventoryEntity.getId());
+      }
+
+      inventoryRepository.allocateInventory(productId, newAllocation, newAvailable);
+
+      return inventoryRepository.getReferenceById(modifyAllocationRQ.getProductId());
     } else {
       throw new NotFoundException(String.format(INVENTORY_NOT_FOUND_MESSAGE, productId));
     }
   }
 
+
   @Override
+  @Transactional
   public InventoryEntity sellInventoryById(SellInventoryRQ sellInventoryRQ) {
     Long id = sellInventoryRQ.getProductId();
     int count = sellInventoryRQ.getCount();
@@ -94,13 +126,14 @@ public class InventoryServiceImpl implements InventoryService {
     Optional<InventoryEntity> inventory = inventoryRepository.findById(id);
     if (inventory.isPresent() && inventory.get().getAvailable() >= count) {
       inventoryRepository.sellInventory(id, count);
-      return inventory.get();
+      return inventoryRepository.getReferenceById(sellInventoryRQ.getProductId());
     } else {
       throw new NotFoundException(String.format(INVENTORY_NOT_FOUND_MESSAGE, id));
     }
   }
 
   @Override
+  @Transactional
   public InventoryEntity cancelInventoryById(CancelInventoryRQ cancelInventoryRQ) {
     Long productId = cancelInventoryRQ.getProductId();
     int count = cancelInventoryRQ.getCount();
@@ -108,7 +141,7 @@ public class InventoryServiceImpl implements InventoryService {
     Optional<InventoryEntity> inventory = inventoryRepository.findById(productId);
     if (inventory.isPresent() && inventory.get().getSold() >= count) {
       inventoryRepository.cancelInventory(productId, count);
-      return inventory.get();
+      return inventoryRepository.getReferenceById(cancelInventoryRQ.getProductId());
     } else {
       throw new NotFoundException(String.format(INVENTORY_NOT_FOUND_MESSAGE, productId));
     }

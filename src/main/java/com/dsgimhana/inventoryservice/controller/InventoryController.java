@@ -10,20 +10,21 @@ import com.dsgimhana.inventoryservice.dto.request.SellInventoryRQ;
 import com.dsgimhana.inventoryservice.dto.response.InventoryRS;
 import com.dsgimhana.inventoryservice.entity.InventoryEntity;
 import com.dsgimhana.inventoryservice.service.InventoryService;
-import java.util.List;
 import org.modelmapper.ModelMapper;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/inventory")
 public class InventoryController {
-  private final InventoryService inventoryService;
 
+  private final Logger logger = LoggerFactory.getLogger(InventoryController.class);
+  private final InventoryService inventoryService;
   private final ModelMapper modelMapper;
 
   public InventoryController(InventoryService inventoryService, ModelMapper modelMapper) {
@@ -32,40 +33,80 @@ public class InventoryController {
   }
 
   @GetMapping
-  public List<InventoryRS> getAllInventories() {
-    List<InventoryEntity> inventories = inventoryService.getAllInventories();
-    return inventories.stream().map(this::mapToDto).toList();
+  public ResponseEntity<List<InventoryRS>> getAllInventories() {
+    try {
+      List<InventoryEntity> inventories = inventoryService.getAllInventories();
+      List<InventoryRS> inventoryResponseList = inventories.stream().map(this::mapToDto).toList();
+      return ResponseEntity.ok(inventoryResponseList);
+    } catch (Exception e) {
+      logger.error("Failed to retrieve all inventories: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   @GetMapping("/available")
-  public List<InventoryRS> getAllAvailableInventories() {
-    List<InventoryEntity> inventories = inventoryService.getAllAvailableInventories();
-    return inventories.stream().map(this::mapToDto).toList();
+  public ResponseEntity<List<InventoryRS>> getAllAvailableInventories() {
+    try {
+      List<InventoryEntity> inventories = inventoryService.getAllAvailableInventories();
+      List<InventoryRS> inventoryResponseList = inventories.stream().map(this::mapToDto).toList();
+      return ResponseEntity.ok(inventoryResponseList);
+    } catch (Exception e) {
+      logger.error("Failed to retrieve all available inventories: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   @GetMapping("/{id}")
-  public InventoryRS getInventoryById(@PathVariable Long id) {
-    InventoryEntity inventory = inventoryService.getInventoryById(id);
-    return mapToDto(inventory);
+  public ResponseEntity<InventoryRS> getInventoryById(@PathVariable Long id) {
+    try {
+      InventoryEntity inventory = inventoryService.getInventoryById(id);
+      if (inventory != null) {
+        InventoryRS inventoryResponse = mapToDto(inventory);
+        return ResponseEntity.ok(inventoryResponse);
+      } else {
+        return ResponseEntity.notFound().build();
+      }
+    } catch (Exception e) {
+      logger.error("Failed to retrieve inventory with ID {}: {}", id, e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   @PostMapping("/allocation")
-  public InventoryRS updateInventoryAllocationById(
-      @RequestBody ModifyAllocationRQ modifyAllocationRQ) {
-    InventoryEntity inventory = inventoryService.updateInventoryAllocationById(modifyAllocationRQ);
-    return mapToDto(inventory);
+  public ResponseEntity<InventoryRS> updateInventoryAllocationById(
+          @RequestBody ModifyAllocationRQ modifyAllocationRQ) {
+    try {
+      InventoryEntity inventory = inventoryService.updateInventoryAllocationById(modifyAllocationRQ);
+      InventoryRS inventoryResponse = mapToDto(inventory);
+      return ResponseEntity.ok(inventoryResponse);
+    } catch (Exception e) {
+      logger.error("Failed to update inventory allocation: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   @PostMapping("/sell")
-  public InventoryRS sellInventoryById(@RequestBody SellInventoryRQ sellInventoryRQ) {
-    InventoryEntity inventory = inventoryService.sellInventoryById(sellInventoryRQ);
-    return mapToDto(inventory);
+  public ResponseEntity<InventoryRS> sellInventoryById(@RequestBody SellInventoryRQ sellInventoryRQ) {
+    try {
+      InventoryEntity inventory = inventoryService.sellInventoryById(sellInventoryRQ);
+      InventoryRS inventoryResponse = mapToDto(inventory);
+      return ResponseEntity.ok(inventoryResponse);
+    } catch (Exception e) {
+      logger.error("Failed to sell inventory: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   @PostMapping("/cancel")
-  public InventoryRS cancelInventoryById(@RequestBody CancelInventoryRQ cancelInventoryRQ) {
-    InventoryEntity inventory = inventoryService.cancelInventoryById(cancelInventoryRQ);
-    return mapToDto(inventory);
+  public ResponseEntity<InventoryRS> cancelInventoryById(@RequestBody CancelInventoryRQ cancelInventoryRQ) {
+    try {
+      InventoryEntity inventory = inventoryService.cancelInventoryById(cancelInventoryRQ);
+      InventoryRS inventoryResponse = mapToDto(inventory);
+      return ResponseEntity.ok(inventoryResponse);
+    } catch (Exception e) {
+      logger.error("Failed to cancel inventory: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   private InventoryRS mapToDto(InventoryEntity inventory) {
